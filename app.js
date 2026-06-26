@@ -245,6 +245,8 @@ function guardarEstilosEnPersistencia() {
             fill: c.fill,
             fillColor: c.fillColor,
             transparencia: c.transparencia,
+            radius: c.radius !== undefined ? c.radius : 6,
+            weight: c.weight !== undefined ? c.weight : 2,
             simbologiaTipo: c.simbologiaTipo || 'unica',
             campoClasificacion: c.campoClasificacion || '',
             mapaColores: c.mapaColores || {},
@@ -281,6 +283,8 @@ function cargarEstilosDePersistencia() {
                     if (est.color !== undefined) c.color = est.color;
                     if (est.fill !== undefined) c.fill = est.fill;
                     if (est.fillColor !== undefined) c.fillColor = est.fillColor;
+                    if (est.radius !== undefined) c.radius = est.radius;
+                    if (est.weight !== undefined) c.weight = est.weight;
                     if (est.simbologiaTipo !== undefined) c.simbologiaTipo = est.simbologiaTipo;
                     if (est.campoClasificacion !== undefined) c.campoClasificacion = est.campoClasificacion;
                     if (est.mapaColores !== undefined) c.mapaColores = est.mapaColores;
@@ -361,7 +365,8 @@ function agregarCapaPropiaAlVisor(nombreCapa, geojsonData) {
         fill: estiloRestaurado.fill !== false,
         fillColor: estiloRestaurado.fillColor || estiloRestaurado.color || colorAzar,
         fillOpacity: 0.35,
-        weight: 2,
+        radius: estiloRestaurado.radius !== undefined ? estiloRestaurado.radius : 6,
+        weight: estiloRestaurado.weight !== undefined ? estiloRestaurado.weight : 2,
         isCustom: true, // Bandera indicadora de capa de usuario
         geomType: geomType,
         transparencia: estiloRestaurado.transparencia,
@@ -487,6 +492,8 @@ function agregarCapaPropiaAlVisor(nombreCapa, geojsonData) {
                 fill: nuevaCapaConf.fill,
                 fillColor: nuevaCapaConf.fillColor,
                 transparencia: nuevaCapaConf.transparencia,
+                radius: nuevaCapaConf.radius !== undefined ? nuevaCapaConf.radius : 6,
+                weight: nuevaCapaConf.weight !== undefined ? nuevaCapaConf.weight : 2,
                 simbologiaTipo: nuevaCapaConf.simbologiaTipo || 'unica',
                 campoClasificacion: nuevaCapaConf.campoClasificacion || '',
                 mapaColores: nuevaCapaConf.mapaColores || {},
@@ -541,7 +548,10 @@ function agregarCapaPropiaAlVisor(nombreCapa, geojsonData) {
 
         // Capa interactiva oculta para popups
         leafletLayerInst = L.geoJSON(geojsonData, {
-            style: () => ({ opacity: 0, fillOpacity: 0, weight: 0 }),
+            pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng, { radius: 10 });
+            },
+            style: () => ({ opacity: 0, fillOpacity: 0, weight: 0, stroke: false, fill: false }),
             onEachFeature: function (feature, layer) {
                 if (feature.properties) {
                     let popupContent = `<div style="max-height: 200px; overflow-y: auto;"><b>Propiedades de ${nuevaCapaConf.nombre}</b><br><br>`;
@@ -556,6 +566,11 @@ function agregarCapaPropiaAlVisor(nombreCapa, geojsonData) {
         leafletLayers[idCapa] = leafletLayerInst;
     } else {
         leafletLayerInst = L.geoJSON(geojsonData, {
+            pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng, {
+                    radius: nuevaCapaConf.radius || 6
+                });
+            },
             style: function (feature) {
                 const visible = esFeatureVisibleEnDelimitacion(feature);
                 const strokeVisible = visible && (nuevaCapaConf.stroke !== false);
@@ -568,7 +583,8 @@ function agregarCapaPropiaAlVisor(nombreCapa, geojsonData) {
                     opacity: strokeVisible ? (nuevaCapaConf.geomType === 'line' ? nuevaCapaConf.opacity : 1) : 0,
                     fill: fillVisible,
                     fillColor: colorSimb,
-                    fillOpacity: fillVisible ? (nuevaCapaConf.geomType === 'line' ? 0 : nuevaCapaConf.fillOpacity) : 0
+                    fillOpacity: fillVisible ? (nuevaCapaConf.geomType === 'line' ? 0 : nuevaCapaConf.fillOpacity) : 0,
+                    radius: nuevaCapaConf.radius || 6
                 };
             },
             onEachFeature: function (feature, layer) {
@@ -766,8 +782,13 @@ function filtrarCapasPersonalizadas() {
                     opacity: strokeVisible ? (c.geomType === 'line' ? c.opacity : 1) : 0,
                     fill: fillVisible,
                     fillColor: colorSimb,
-                    fillOpacity: fillVisible ? (c.geomType === 'line' ? 0 : c.fillOpacity) : 0
+                    fillOpacity: fillVisible ? (c.geomType === 'line' ? 0 : c.fillOpacity) : 0,
+                    radius: c.radius || 6
                 });
+                
+                if (c.geomType === 'point' && layer.setRadius) {
+                    layer.setRadius(c.radius || 6);
+                }
                 
                 if (visible) {
                     layer.options.interactive = true;
@@ -929,6 +950,43 @@ const heatLayers = {};
 function obtenerHtmlPanelEstilo(capa, isDisponible) {
     const hasFill = capa.geomType !== 'line';
     
+    let controlGrosorHtml = '';
+    if (capa.geomType === 'point') {
+        controlGrosorHtml = `
+        <div class="style-row">
+            <span>Tamaño de punto</span>
+            <div class="style-controls" style="gap: 8px;">
+                <input type="range" id="size-slider-${capa.id}" min="1" max="30" value="${capa.radius || 6}" class="style-range" ${isDisponible ? '' : 'disabled'}>
+                <span id="size-val-${capa.id}" style="font-size: 11px; color: var(--text-secondary); width: 28px; text-align: right;">${capa.radius || 6}px</span>
+            </div>
+        </div>
+        <div class="style-row">
+            <span>Grosor de borde</span>
+            <div class="style-controls" style="gap: 8px;">
+                <input type="range" id="weight-slider-${capa.id}" min="0" max="10" value="${capa.weight !== undefined ? capa.weight : 2}" class="style-range" ${isDisponible ? '' : 'disabled'}>
+                <span id="weight-val-${capa.id}" style="font-size: 11px; color: var(--text-secondary); width: 28px; text-align: right;">${capa.weight !== undefined ? capa.weight : 2}px</span>
+            </div>
+        </div>`;
+    } else if (capa.geomType === 'line') {
+        controlGrosorHtml = `
+        <div class="style-row">
+            <span>Grosor de línea</span>
+            <div class="style-controls" style="gap: 8px;">
+                <input type="range" id="weight-slider-${capa.id}" min="1" max="15" value="${capa.weight !== undefined ? capa.weight : 2}" class="style-range" ${isDisponible ? '' : 'disabled'}>
+                <span id="weight-val-${capa.id}" style="font-size: 11px; color: var(--text-secondary); width: 28px; text-align: right;">${capa.weight !== undefined ? capa.weight : 2}px</span>
+            </div>
+        </div>`;
+    } else { // 'polygon'
+        controlGrosorHtml = `
+        <div class="style-row">
+            <span>Grosor de contorno</span>
+            <div class="style-controls" style="gap: 8px;">
+                <input type="range" id="weight-slider-${capa.id}" min="0" max="10" value="${capa.weight !== undefined ? capa.weight : 2}" class="style-range" ${isDisponible ? '' : 'disabled'}>
+                <span id="weight-val-${capa.id}" style="font-size: 11px; color: var(--text-secondary); width: 28px; text-align: right;">${capa.weight !== undefined ? capa.weight : 2}px</span>
+            </div>
+        </div>`;
+    }
+    
     return `
         <div class="style-row">
             <span>Borde (Contorno)</span>
@@ -963,6 +1021,7 @@ function obtenerHtmlPanelEstilo(capa, isDisponible) {
                 <span id="transparency-val-${capa.id}" style="font-size: 11px; color: var(--text-secondary); width: 28px; text-align: right;">${capa.transparencia}%</span>
             </div>
         </div>
+        ${controlGrosorHtml}
         
         <!-- Sección de Clasificación -->
         <div class="classification-section">
@@ -1242,6 +1301,12 @@ function conectarEventosEstilo(li, capa, aplicarEstilosCapa, isDisponible) {
     const transparencySlider = li.querySelector(`#transparency-slider-${capa.id}`);
     const transparencyVal = li.querySelector(`#transparency-val-${capa.id}`);
 
+    const sizeSlider = li.querySelector(`#size-slider-${capa.id}`);
+    const sizeVal = li.querySelector(`#size-val-${capa.id}`);
+
+    const weightSlider = li.querySelector(`#weight-slider-${capa.id}`);
+    const weightVal = li.querySelector(`#weight-val-${capa.id}`);
+
     const selectSymType = li.querySelector(`#select-symbology-type-${capa.id}`);
     const selectSymField = li.querySelector(`#select-symbology-field-${capa.id}`);
     const selectSymPalette = li.querySelector(`#select-symbology-palette-${capa.id}`);
@@ -1266,6 +1331,20 @@ function conectarEventosEstilo(li, capa, aplicarEstilosCapa, isDisponible) {
         transparencyVal.textContent = `${e.target.value}%`;
         aplicarEstilosCapa();
     });
+
+    if (sizeSlider) {
+        sizeSlider.addEventListener('input', (e) => {
+            if (sizeVal) sizeVal.textContent = `${e.target.value}px`;
+            aplicarEstilosCapa();
+        });
+    }
+
+    if (weightSlider) {
+        weightSlider.addEventListener('input', (e) => {
+            if (weightVal) weightVal.textContent = `${e.target.value}px`;
+            aplicarEstilosCapa();
+        });
+    }
 
     const manejarCambioClasificacion = () => {
         capa.simbologiaTipo = selectSymType.value;
@@ -1304,6 +1383,8 @@ function aplicarCambiosDeEstilo(capa, li) {
     const fillIndicator = li.querySelector(`#fill-indicator-${capa.id}`);
 
     const transparencySlider = li.querySelector(`#transparency-slider-${capa.id}`);
+    const sizeSlider = li.querySelector(`#size-slider-${capa.id}`);
+    const weightSlider = li.querySelector(`#weight-slider-${capa.id}`);
 
     if (!toggleBorder || !borderPicker || !transparencySlider) return;
 
@@ -1318,6 +1399,13 @@ function aplicarCambiosDeEstilo(capa, li) {
     capa.fill = fillActive;
     capa.fillColor = fillColor;
     capa.transparencia = transparency;
+
+    if (sizeSlider) {
+        capa.radius = parseInt(sizeSlider.value);
+    }
+    if (weightSlider) {
+        capa.weight = parseInt(weightSlider.value);
+    }
 
     if (capa.geomType === 'line') {
         capa.opacity = 1 - (transparency / 100);
@@ -1388,9 +1476,18 @@ function aplicarCambiosDeEstilo(capa, li) {
                     fill: fillActive,
                     fillColor: colorSimb,
                     fillOpacity: fillActive ? (capa.geomType === 'line' ? 0 : capa.fillOpacity) : 0,
-                    weight: borderActive ? capa.weight : 0
+                    weight: borderActive ? capa.weight : 0,
+                    radius: capa.radius || 6
                 };
             });
+
+            if (capa.geomType === 'point') {
+                leafletLayers[capa.id].eachLayer(layer => {
+                    if (layer.setRadius) {
+                        layer.setRadius(capa.radius || 6);
+                    }
+                });
+            }
         }
     }
 
@@ -1487,6 +1584,8 @@ function initLayers() {
                     fill: capa.fill,
                     fillColor: capa.fillColor,
                     transparencia: capa.transparencia,
+                    radius: capa.radius !== undefined ? capa.radius : 6,
+                    weight: capa.weight !== undefined ? capa.weight : 2,
                     simbologiaTipo: capa.simbologiaTipo || 'unica',
                     campoClasificacion: capa.campoClasificacion || '',
                     mapaColores: capa.mapaColores || {},
