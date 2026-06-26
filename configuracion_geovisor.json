@@ -15,6 +15,7 @@
     "Areas_Protegidas_corte.json",
     "Limite_ZonaEstudio.json",
     "P_plaga_moko_positivo.json",
-    "fincas_Bananeras.json"
+    "fincas_Bananeras.json",
+    "P_plaga_moko_negativo.json"
   ]
 }
