@@ -12,8 +12,8 @@
   // Lista de archivos GeoJSON/JSON en la carpeta data/ que se cargarán automáticamente.
   // Es muy útil para despliegue estático (como GitHub Pages) donde no se pueden escanear carpetas dinámicamente:
   "capas_a_cargar": [
-  //"Areas_Protegidas_corte.json",
-  //"Limite_ZonaEstudio.json",
-    "data/P_plaga_moko_positivo.json"
+    "Areas_Protegidas_corte.json",
+    "Limite_ZonaEstudio.json",
+    "P_plaga_moko_positivo.json"
   ]
 }
