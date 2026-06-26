@@ -14,6 +14,7 @@
   "capas_a_cargar": [
     "Areas_Protegidas_corte.json",
     "Limite_ZonaEstudio.json",
-    "P_plaga_moko_positivo.json"
+    "P_plaga_moko_positivo.json",
+    "fincas_Bananeras.json"
   ]
 }
